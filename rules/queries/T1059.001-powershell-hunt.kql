@@ -1,0 +1,12 @@
+// Title: PowerShell Encoded Command Execution Hunt
+// Attack Technique: T1059.001
+// Description: Hunts for PowerShell execution events utilizing base64 encoding flags or suspicious obfuscation patterns.
+
+SecurityEvent
+| where EventID == 4688 or EventID == 1
+| where ProcessCommandLine has_any ("-enc", "-e", "-encodedcommand")
+| extend DecodedCommand = iif(ProcessCommandLine matches regex @"(?i)(-enc(odedcommand)?)\s+([A-Za-z0-9+/=]+)", 
+    base64_decode_tostring(extract(@"(?i)(-enc(odedcommand)?)\s+([A-Za-z0-9+/=]+)", 3, ProcessCommandLine)), 
+    "No Base64 Payload Detected")
+| project TimeGenerated, Computer, Account, ProcessName, ProcessCommandLine, DecodedCommand
+| order by TimeGenerated desc
